@@ -1,0 +1,48 @@
+Vagrant.configure("2") do |config|
+  config.vm.define "m-k8s" do |cfg|
+    cfg.vm.box = "sysnet4admin/CentOS-k8s"
+    cfg.vm.provider "virtualbos" do |vb|
+      vb.name = "m-k8s(github_SysNet4Admin"
+      vb.cpus = 2
+      vb.memory = 2048
+      vb.Customize ["modifyvm", :id, '--groups', '/k8s-SM(github_SysNet4Admin)']
+    end
+    cfg.vm.host_name = "m-k8s"
+    cfg.vm.network "private_network", ip: "192.168.1.10"
+    cfg.vm.network "forwarded_port", guest:22, host:60010, auto_correct:true, id:'ssh'
+    cfg.vm.synced_folder"../data","/vagrant", disabled:true
+    cfg.vm.provision "shell", path: "install_pkg.sh"
+    cfg.vm.provision "file", source: "ping_2_nds.sh", destination: 'ping_2_nds.sh'
+# 파일을 게스트 운영체재에 전달하기 위해 "shell"이 아닌 "file"구문으로 변경합니다
+# 이렇게 함녀 호스트에 있는 ping_2_nds.sh 파일을 게스트의 홈 디렉터리(/home/vagrant)
+# 로 전달합니다.
+    cfg.vm.provision "shell", path:"config.sh"
+# config.sh를 게스트에서 실행합니다. 
+  end
+
+  #=================#
+  #   Added Nodes   #
+  #=================#
+
+  (1..3).each do |i| #1부터 3까지 3개의 인자를 반복해 i로 입력
+    config.vm.define "w#{i}-k8s" do |cfg| # {i} 값이 1,2,3으로 차례대로 치환됨
+      cfg.vm.box = "sysnet4admin/CentOS-k8s"
+      cfg.vm.prvider "virtualbox" do |vb|
+        vb.name = "w#{i}-k8s(github_SysNet4Admin)"
+        vb.cpus = 1
+        vb.memory = 1024
+        vb.customize ["modifyvm", :id, "--groups", "/k8s-SM(github_SysNet4Admin)"]
+      end
+#/k8s-SM(github_SysNet4Admin 이부분에서 까먹고 /를 못써서 실행이 안되서 모범코드로
+#실행후 확인
+      cfg.vm.host_name = "w#{i}-k8s"
+      cfg.vm.network "private_network", ip: "912.168.1.10#{i}" #{i}값이 1,2,3으로 차례대로 치환됨
+      cfg.vm.network "forwarded_port", guest:22, host: "6010#{i}", auto_correct: true, id:'ssh' # {i}값이 1,2,3으로 차례대로 치환됨
+      cfg.vm.synced_folder "../data", "/vagrant", disabled:true
+      cfg.vm.provision "shell", path: "install_pkg.sh"
+# 추가한 3대의 CentOS에 대한 구성입니다. 거의 모든 내용이 기존에 Cent와 동일하나,
+# 3대를 효율적으로 구성하기위해 반목문을 사용합니다. 
+# 반복은 (1..3).each로 이루어지며, 해당 값은 |i|를 통해 #{i}로 치환되 사용합니다.
+    end
+  end
+end
